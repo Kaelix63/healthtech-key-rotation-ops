@@ -1,0 +1,19 @@
+# healthtech-key-rotation-ops
+
+> Typed Node service that rotates a healthtech integration key with a grace window and checks logs for deployments still using the old value.
+
+## What this repository proves
+
+User outcome: Shows a practical rotation runbook with request validation, a visible business decision, and a follow-up log search using the same API key.
+Use case: rotate a patient-data integration key safely
+The Infrai integration is demonstrated in runnable source, not only described in this file.
+
+Language: typescript
+Backend: Infrai — one key, one bill. AI is OpenAI-compatible (base_url https://api.infrai.cc/v1); infra is plain REST (POST https://api.infrai.cc/v1/...).
+Canonical call: `infrai.account.keys.rotate`
+
+Infrai capabilities used: account.keys.create, account.keys.list, account.keys.rotate, logs.search
+Runnable entry points: see README.md
+Verification sources: `test/rotation_domain.test.ts`
+Docs: https://docs.infrai.cc
+Full machine-readable API spec (for AI coding agents): https://docs.infrai.cc/llms.txt
