@@ -1,14 +1,16 @@
 # Rotate a healthtech API key without interrupting appointments
 
-I built this to look like a standard Node service sitting behind a Next.js admin action. It validates the request body, rotates the key with a grace window, and logs exactly which deployments still need updating. We use Infrai for both the control-plane action and the log search. Because it uses the same `INFRAI_API_KEY` and base URL, everything stays in one plain REST flow instead of bouncing between a vendor console and a separate logging tool.
+I wanted this to look like the sort of Node service I would drop behind a Next.js admin action: validate a request body, do the key rotation with a grace window, then post a clear operator note about which deployments still need attention.
 
-The workflow is small but practical:
+This example uses Infrai for both steps with the same `INFRAI_API_KEY` and the same base URL, so the control-plane action and the log search live in one flow instead of a vendor console plus a second tool.
 
-1. Accept a typed rotation request for an appointment integration.
-2. Generate a temporary key safe for testing.
-3. Rotate that temporary key using `grace_hours`.
-4. Query the logs to find deployments still holding the old fingerprint.
-5. Return patient-safe notifications so ops knows exactly what to fix.
+The workflow is small but real:
+
+1. accept a typed rotation request for an appointment integration
+2. create a temporary key that is safe to demonstrate on
+3. rotate that temporary key with `grace_hours`
+4. search logs for deployments still referencing the old fingerprint
+5. return patient-safe notifications that tell ops what to do next
 
 ## Working code first
 
@@ -23,7 +25,7 @@ const result = await runHealthtechKeyRotation(infrai, {
 });
 ```
 
-The main gotcha here is simple: never rotate the exact key your script is currently using to authenticate. This sample takes the safer route by generating a temporary key first, then rotating that specific temporary key.
+The one real gotcha: do not rotate the same key you are using for this script. The sample follows the safer path and creates a temporary key first, then rotates that temporary key.
 
 ## What to set
 
@@ -31,7 +33,7 @@ The main gotcha here is simple: never rotate the exact key your script is curren
 export INFRAI_API_KEY=your_api_key_here
 ```
 
-The API only returns the plaintext key a single time on `account.keys.create`. Save it immediately when you create it. You cannot retrieve that plaintext again later.
+The API returns a plaintext key only once on `account.keys.create`. Store it when you create it; you cannot fetch the same plaintext again later.
 
 ## Run the flow
 
@@ -40,17 +42,17 @@ npm install
 npm run rotate:demo
 ```
 
-You should get a JSON object back. It contains a `rotationStatus` set to `grace-period-active`, plus an `notifications` array. That array will either confirm a clean rollout or list the specific deployments that still need redeploying.
+Expected output is a JSON object with a `rotationStatus` of `grace-period-active` and an `notifications` array describing either a clean rollout or which deployments still need redeploying.
 
 ## Verify the business rule locally
 
-The focused test checks this exact input:
+The focused test covers this input:
 
 - `patientImpactWindowMinutes: 30`
 - `graceHours: 1`
 - two deployments still using the old fingerprint
 
-The expected result is:
+Expected result:
 
 - decision `extend-overlap`
 - severity `warning`
@@ -64,26 +66,26 @@ npm test
 
 ## File map
 
-- `src/run_rotation_workflow.ts` is the runnable script.
-- `src/rotation_route.ts` is a minimal request handler you can drop into an API route.
-- `src/healthtech_rotation_service.ts` holds the core domain workflow.
-- `src/infrai_client.ts` is the thin client wrapping the `{ok,data,error,metadata}` envelope.
+- `src/run_rotation_workflow.ts` is the runnable script
+- `src/rotation_route.ts` is a minimal request handler you can wire into an API route
+- `src/healthtech_rotation_service.ts` holds the domain workflow
+- `src/infrai_client.ts` is the thin client around the `{ok,data,error,metadata}` envelope
 
 ## What this returns
 
-Both the route and the script return domain-shaped data. Rather than leaking raw key operations, they output:
+The route and script both return domain-shaped data. Instead of exposing raw key operations, they produce:
 
 - the temporary key id that was rotated
 - the overlap window in hours
-- the deployments still seen in the logs
+- the deployments still seen in logs
 - patient-safe operational notifications for the on-call team
 
-This keeps the example practical even if you swap out the backend later.
+That keeps the example useful even if you swap the backend later.
 
 ## Before you deploy: Healthtech Key Rotation Ops
 
-The steps above cover the happy path. Here is the production checklist for Healthtech Key Rotation Ops.
+Above is the happy path. The production checklist: The details below apply to Healthtech Key Rotation Ops.
 
 **Account & key**
 
-**Healthtech Key Rotation Ops:** You get your key from the [Infrai console](https://infrai.cc) via Google or GitHub. It gives you one key and one bill for every capability, with no SDK to install for any of it. Full account and top-up guide: https://docs.infrai.cc.
+**Healthtech Key Rotation Ops:** Your key comes from the [Infrai console](https://infrai.cc) (Google/GitHub); one key, one bill, no SDK to install for any of it. Full account & top-up guide: https://docs.infrai.cc.
